@@ -1,0 +1,15 @@
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'Customer'
+);
+
+selectUserByUsername:
+SELECT * FROM users WHERE username = ?;
+
+insertUser:
+INSERT INTO users(username, password, role) VALUES (?, ?, ?);
+
+validateUser:
+SELECT * FROM users WHERE username = ? AND password = ? AND role = ?;
