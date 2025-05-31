@@ -11,15 +11,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(onLogout: () -> Unit, username: String) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.White, Color.LightGray, Color.DarkGray, Color.Black)
-                )
-            ),
         contentAlignment = Alignment.Center
     ) {
+        WavyBackground(modifier = Modifier.fillMaxSize())
         Card(
             elevation = 12.dp,
             modifier = Modifier

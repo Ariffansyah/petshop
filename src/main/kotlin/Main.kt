@@ -12,12 +12,23 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.unit.dp
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.petshop.database.Database
+import java.io.File
 
 val driver = JdbcSqliteDriver("jdbc:sqlite:petshop.db")
 val database = Database(driver)
-val usersQueries = database.petshopQueries // adjust this if your actual query object is named differently
+val usersQueries = database.petshopQueries
+val animalsQueries = database.petshopQueries
+fun databaseExists(path: String): Boolean = File(path).exists()
 
 enum class Screen {
     MainMenu,
@@ -27,12 +38,20 @@ enum class Screen {
     Home
 }
 
+data class Animal(
+    val id: Long,
+    val name: String,
+    val species: String,
+    val age: Int,
+    val price: Double,
+    val status: String
+)
+
 enum class UserRole(val display: String) {
     Customer("Customer"),
     Admin("Admin")
 }
 
-// OOP User hierarchy
 abstract class User(
     open val id: Int? = null,
     open val username: String,
@@ -101,21 +120,69 @@ class Admin(
     }
 }
 
+@Composable
+fun WavyBackground(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+
+        val blackWave = Path().apply {
+            moveTo(0f, height * 0.7f)
+            cubicTo(width * 0.25f, height * 0.8f, width * 0.75f, height * 0.6f, width, height * 0.7f)
+            lineTo(width, height)
+            lineTo(0f, height)
+            close()
+        }
+        drawPath(
+            path = blackWave,
+            color = Color.Black,
+            style = Fill
+        )
+
+        val greyWave = Path().apply {
+            moveTo(0f, height * 0.5f)
+            cubicTo(width * 0.25f, height * 0.6f, width * 0.75f, height * 0.4f, width, height * 0.5f)
+            lineTo(width, height)
+            lineTo(0f, height)
+            close()
+        }
+        drawPath(
+            path = greyWave,
+            color = Color.LightGray.copy(alpha = 0.85f),
+            style = Fill
+        )
+
+        val whiteWave = Path().apply {
+            moveTo(0f, height * 0.3f)
+            cubicTo(width * 0.25f, height * 0.4f, width * 0.75f, height * 0.2f, width, height * 0.3f)
+            lineTo(width, height)
+            lineTo(0f, height)
+            close()
+        }
+        drawPath(
+            path = whiteWave,
+            color = Color.White.copy(alpha = 0.8f),
+            style = Fill
+        )
+    }
+}
+
 fun main() = application {
-    Database.Schema.create(driver)
+    val dbPath = "petshop.db"
+    val driver = JdbcSqliteDriver("jdbc:sqlite:$dbPath")
+    if (!databaseExists(dbPath)) {
+        Database.Schema.create(driver)
+    }
     var loggedUsername by mutableStateOf("")
     var loggedRole by mutableStateOf<UserRole?>(null)
     Window(onCloseRequest = ::exitApplication, title = "Petshop App") {
         var currentScreen by remember { mutableStateOf(Screen.MainMenu) }
         MaterialTheme {
             Box(
-                modifier = Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        listOf(Color.White, Color.LightGray, Color.DarkGray, Color.Black)
-                    )
-                ),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
+                WavyBackground(modifier = Modifier.fillMaxSize())
                 when (currentScreen) {
                     Screen.AdminPanel -> AdminPanel(
                         onLogout = {
@@ -123,7 +190,8 @@ fun main() = application {
                             loggedUsername = ""
                             loggedRole = null
                         },
-                        username = loggedUsername
+                        username = loggedUsername,
+                        animalsQueries = animalsQueries
                     )
                     Screen.Home -> HomeScreen(
                         onLogout = {
@@ -164,12 +232,14 @@ fun MainMenu(onLogin: () -> Unit, onRegister: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Welcome to Petshop App", style = MaterialTheme.typography.h5, color = Color.White)
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onLogin, modifier = Modifier.width(200.dp)) {
-            Text("Login")
+        Button(onClick = onLogin, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black),
+            modifier = Modifier.width(200.dp)) {
+            Text("Login", color = Color.White)
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRegister, modifier = Modifier.width(200.dp)) {
-            Text("Register")
+        Button(onClick = onRegister, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black),
+            modifier = Modifier.width(200.dp)) {
+            Text("Register", color = Color.White)
         }
     }
 }
@@ -193,7 +263,6 @@ fun RegisterScreen(onBack: () -> Unit) {
         Text("Register", style = MaterialTheme.typography.h5)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Role selector
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Register as: ")
             Spacer(modifier = Modifier.width(8.dp))
@@ -266,7 +335,7 @@ fun RegisterScreen(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(onClick = onBack) {
-            Text("Back to Menu")
+            Text("Back to Menu", color = Color.Black)
         }
 
         message?.let {
@@ -283,8 +352,11 @@ fun DropdownMenuRoleSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        Button(onClick = { expanded = true }) {
-            Text(selectedRole.display)
+        Button(
+            onClick = { expanded = true },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+        ) {
+            Text(selectedRole.display, color = Color.White)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             UserRole.values().forEach { role ->
@@ -317,7 +389,6 @@ fun LoginScreen(onBack: () -> Unit, onAdminLogin: (String) -> Unit, onCustomerLo
         Text("Login", style = MaterialTheme.typography.h5)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Role selector
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Login as: ")
             Spacer(modifier = Modifier.width(8.dp))
@@ -380,7 +451,7 @@ fun LoginScreen(onBack: () -> Unit, onAdminLogin: (String) -> Unit, onCustomerLo
         Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(onClick = onBack) {
-            Text("Back to Menu")
+            Text("Back to Menu", color = Color.Black)
         }
 
         message?.let {

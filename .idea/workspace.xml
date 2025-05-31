@@ -4,7 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="baa4af29-cd8a-4ab6-85b1-cf92f54dcbe9" name="Changes" comment="" />
+    <list default="true" id="baa4af29-cd8a-4ab6-85b1-cf92f54dcbe9" name="Changes" comment="">
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/.idea/workspace.xml" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/.run/desktop.run.xml" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/.run/desktop.run.xml" afterDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/build.gradle.kts" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/build.gradle.kts" afterDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/petshop.db" beforeDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/kotlin/AdminPanel.kt" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/kotlin/AdminPanel.kt" afterDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/kotlin/Home.kt" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/kotlin/Home.kt" afterDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/kotlin/Main.kt" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/kotlin/Main.kt" afterDir="false" />
+      <change beforePath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/sqldelight/app/petshop/database/petshop.sq" beforeDir="false" afterPath="/var/home/arpthef/Documents/Project/Java/petshop/src/main/sqldelight/app/petshop/database/petshop.sq" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -40,6 +49,21 @@
       </list>
     </option>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="/var/home/arpthef/Documents/Project/Java/petshop" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Ariffansyah&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:Ariffansyah/petshop.git&quot;,
+    &quot;accountId&quot;: &quot;92445a00-52be-479f-b53b-92058fb6c41c&quot;
+  }
+}</component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
@@ -56,6 +80,8 @@
     &quot;Gradle.desktop.executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -88,7 +114,10 @@
       <workItem from="1748595738759" duration="2604000" />
       <workItem from="1748598416171" duration="199000" />
       <workItem from="1748598629766" duration="896000" />
-      <workItem from="1748606594711" duration="1605000" />
+      <workItem from="1748606594711" duration="2186000" />
+      <workItem from="1748665761918" duration="2509000" />
+      <workItem from="1748668871089" duration="2249000" />
+      <workItem from="1748671314636" duration="629000" />
     </task>
     <servers />
   </component>
