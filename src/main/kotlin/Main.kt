@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -35,7 +36,8 @@ enum class Screen {
     Login,
     Register,
     AdminPanel,
-    Home
+    Home,
+    CustomerPanel
 }
 
 data class Animal(
@@ -193,13 +195,14 @@ fun main() = application {
                         username = loggedUsername,
                         animalsQueries = animalsQueries
                     )
-                    Screen.Home -> HomeScreen(
+                    Screen.CustomerPanel -> CustomerPanel (
                         onLogout = {
                             currentScreen = Screen.MainMenu
                             loggedUsername = ""
                             loggedRole = null
                         },
-                        username = loggedUsername
+                        username = loggedUsername,
+                        animalsQueries = animalsQueries
                     )
                     Screen.MainMenu -> MainMenu(
                         onLogin = { currentScreen = Screen.Login },
@@ -215,12 +218,14 @@ fun main() = application {
                         onCustomerLogin = { username ->
                             loggedUsername = username
                             loggedRole = UserRole.Customer
-                            currentScreen = Screen.Home
+                            currentScreen = Screen.CustomerPanel
                         }
                     )
                     Screen.Register -> RegisterScreen(
                         onBack = { currentScreen = Screen.MainMenu }
                     )
+
+                    Screen.Home -> TODO()
                 }
             }
         }
