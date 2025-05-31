@@ -1,5 +1,6 @@
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -61,6 +62,10 @@ fun AdminPanel(
                     state = state,
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    item {
+                        AddAnimalCard(onAdd = { showAddDialog = true })
+                        Spacer(Modifier.height(12.dp))
+                    }
                     items(animalsState) { animal ->
                         AnimalCard(
                             animal = animal,
@@ -131,6 +136,32 @@ fun AdminPanel(
                     animalToEdit = null
                 },
                 onDismiss = { animalToEdit = null }
+            )
+        }
+    }
+}
+
+@Composable
+fun AddAnimalCard(
+    onAdd: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .padding(horizontal = 8.dp)
+            .clickable(onClick = onAdd),
+        elevation = 8.dp,
+        backgroundColor = Color(0xFF808080)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Text(
+                text = "+",
+                color = Color.White,
+                style = MaterialTheme.typography.h3
             )
         }
     }
