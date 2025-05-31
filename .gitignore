@@ -43,3 +43,38 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# Kotlin / Gradle / IntelliJ / Android Studio
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+
+# Android Studio
+.cxx/
+captures/
+.externalNativeBuild/
+local.properties
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+
+# Logs
+*.log
+
+# Misc
+*.class
+
+# Exclude run configurations (optional)
+.run/
