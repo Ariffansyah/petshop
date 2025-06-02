@@ -12,13 +12,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import animalsQueries
 import app.petshop.database.PetshopQueries
+import java.time.LocalDateTime
+import kotlin.collections.addAll
+import kotlin.text.clear
+import kotlin.text.toInt
+import kotlin.text.toLong
 
 enum class CustomerPage {
     MAIN,
-    BROWSE,
-    SEARCH
+    BROWSE
+}
+
+data class Transaction(
+    val customer: Customer,
+    val animal: Animal,
+    val date: LocalDateTime
+) {
+    fun getTotal(): Double = animal.price
 }
 
 @Composable
@@ -44,9 +58,13 @@ fun CustomerPanel(
                 .background(Color.White)
         ) {
             when (currentPage) {
-                CustomerPage.MAIN -> MainPage()
-                CustomerPage.BROWSE -> BrowsePage(animalsQueries)
-                CustomerPage.SEARCH -> SearchPage(animalsQueries)
+                CustomerPage.MAIN -> MainPage(
+                    onPageSelected = { currentPage = it }
+                )
+                CustomerPage.BROWSE -> BrowseSearchPage(
+                    animalsQueries = animalsQueries,
+                    customer = Customer(username = username, password = "")
+                )
             }
         }
     }
@@ -73,8 +91,8 @@ fun CustomerSidebar(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Welcome, $username",
-                style = MaterialTheme.typography.h6,
+                text = "Pet Shop",
+                style = MaterialTheme.typography.h6 .copy(fontWeight = FontWeight.Bold),
                 color = Color.Black,
                 textAlign = TextAlign.Center
             )
@@ -94,20 +112,13 @@ fun CustomerSidebar(
         )
 
         SidebarMenuItem(
-            title = "Browse Animals",
+            title = "Browse",
             isSelected = currentPage == CustomerPage.BROWSE,
             onClick = { onPageSelected(CustomerPage.BROWSE) }
         )
 
-        SidebarMenuItem(
-            title = "Search",
-            isSelected = currentPage == CustomerPage.SEARCH,
-            onClick = { onPageSelected(CustomerPage.SEARCH) }
-        )
-
         Spacer(modifier = Modifier.weight(1f))
 
-        // Logout Button
         Button(
             onClick = onLogout,
             colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray)
@@ -124,7 +135,7 @@ fun SidebarMenuItem(
     onClick: () -> Unit
 ) {
     val backgroundColor = if (isSelected) Color.DarkGray else Color.Transparent
-    val textColor = Color.Black
+    val textColor = if (isSelected) Color.White else Color.Black
 
     Row(
         modifier = Modifier
@@ -145,7 +156,7 @@ fun SidebarMenuItem(
 }
 
 @Composable
-fun MainPage() {
+fun MainPage(onPageSelected: (CustomerPage) -> Unit,) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -159,15 +170,29 @@ fun MainPage() {
             color = Color.Black,
             textAlign = TextAlign.Center
         )
-
+        Button(
+            onClick = { onPageSelected(CustomerPage.BROWSE) },
+            modifier = Modifier.padding(top = 24.dp),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+        ) {
+            Text("Start Browsing", color = Color.White)
+        }
     }
 }
 
 @Composable
-fun BrowsePage(animalsQueries: PetshopQueries) {
+fun BrowseSearchPage(
+    animalsQueries: PetshopQueries,
+    customer: Customer
+) {
+    var query by remember { mutableStateOf("") }
     val allAnimals = remember { mutableStateListOf<Animal>() }
     val filteredAnimals = remember { mutableStateListOf<Animal>() }
     var selectedSpecies by remember { mutableStateOf("All") }
+    var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+    var showTotal by remember { mutableStateOf(false) }
+    var transaction by remember { mutableStateOf<Transaction?>(null) }
 
     fun refreshAnimals() {
         allAnimals.clear()
@@ -193,11 +218,15 @@ fun BrowsePage(animalsQueries: PetshopQueries) {
         filteredAnimals.addAll(allAnimals)
     }
 
-    LaunchedEffect(selectedSpecies, allAnimals.size) {
+    LaunchedEffect(query, selectedSpecies, allAnimals.size) {
         filteredAnimals.clear()
         filteredAnimals.addAll(
-            if (selectedSpecies == "All") allAnimals
-            else allAnimals.filter { it.species.equals(selectedSpecies, ignoreCase = true) }
+            allAnimals.filter {
+                (selectedSpecies == "All" || it.species.equals(selectedSpecies, ignoreCase = true)) &&
+                (query.isBlank() ||
+                    it.name.contains(query, ignoreCase = true) ||
+                    it.species.contains(query, ignoreCase = true))
+            }
         )
     }
 
@@ -216,7 +245,12 @@ fun BrowsePage(animalsQueries: PetshopQueries) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        Text("Filter by Category", style = MaterialTheme.typography.subtitle1)
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("Search by name or species") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -253,7 +287,11 @@ fun BrowsePage(animalsQueries: PetshopQueries) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp, horizontal = 12.dp),
+                            .padding(vertical = 8.dp, horizontal = 12.dp)
+                            .clickable {
+                                selectedAnimal = animal
+                                showDialog = true
+                            },
                         elevation = 6.dp
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -273,21 +311,63 @@ fun BrowsePage(animalsQueries: PetshopQueries) {
             )
         }
     }
-}
 
-@Composable
-fun SearchPage(animalsQueries: PetshopQueries) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Text(
-            text = "Search Animals",
-            style = MaterialTheme.typography.h5,
-            color = Color.Black,
-            modifier = Modifier.padding(bottom = 16.dp)
+    if (showDialog && selectedAnimal != null) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Animal Details") },
+            text = {
+                Column {
+                    Text("Name: ${selectedAnimal!!.name}")
+                    Text("Species: ${selectedAnimal!!.species}")
+                    Text("Age: ${selectedAnimal!!.age}")
+                    Text("Price: $${selectedAnimal!!.price}")
+                    Text("Status: ${selectedAnimal!!.status}")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    animalsQueries.updateAnimalStatus("Bought", selectedAnimal!!.id)
+                    transaction = Transaction(
+                        customer = customer,
+                        animal = selectedAnimal!!,
+                        date = LocalDateTime.now()
+                    )
+                    showDialog = false
+                    showTotal = true
+                    refreshAnimals()
+                }) {
+                    Text("Buy")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
+    }
 
+    if (showTotal && transaction != null) {
+        AlertDialog(
+            onDismissRequest = { showTotal = false },
+            title = { Text("Purchase Successful") },
+            text = {
+                Column {
+                    Text("Name: ${transaction!!.animal.name}")
+                    Text("Species: ${transaction!!.animal.species}")
+                    Text("Age: ${transaction!!.animal.age}")
+                    Text("Price: $${transaction!!.animal.price}")
+                    Text("Status: ${transaction!!.animal.status}")
+                    Text("Date: ${transaction!!.date}")
+                    Text("Total: $${transaction!!.getTotal()}")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTotal = false }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }
