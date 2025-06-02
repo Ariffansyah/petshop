@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.petshop.database.PetshopQueries
+import org.jetbrains.skia.FontWeight
 
 @Composable
 fun AdminPanel(
@@ -49,8 +50,8 @@ fun AdminPanel(
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
-            Text("Admin Panel", style = MaterialTheme.typography.h4, color = Color.Black)
-            Text("Welcome, $username", style = MaterialTheme.typography.subtitle1, color = Color.Black)
+            Text("Admin Panel", style = MaterialTheme.typography.h4 .copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Color.Black)
+            Text("Welcome, $username", style = MaterialTheme.typography.subtitle1 .copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Color.Black)
             Spacer(Modifier.height(16.dp))
 
             Box(modifier = Modifier
