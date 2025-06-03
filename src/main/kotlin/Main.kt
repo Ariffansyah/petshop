@@ -14,13 +14,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.WindowState
+import androidx.compose.ui.window.rememberWindowState
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.petshop.database.Database
 import java.io.File
@@ -32,6 +33,7 @@ val animalsQueries = database.petshopQueries
 fun databaseExists(path: String): Boolean = File(path).exists()
 
 enum class Screen {
+    Landing,
     MainMenu,
     Login,
     Register,
@@ -39,15 +41,6 @@ enum class Screen {
     Home,
     CustomerPanel
 }
-
-data class Animal(
-    val id: Long,
-    val name: String,
-    val species: String,
-    val age: Int,
-    val price: Double,
-    val status: String
-)
 
 enum class UserRole(val display: String) {
     Customer("Customer"),
@@ -177,55 +170,85 @@ fun main() = application {
     }
     var loggedUsername by mutableStateOf("")
     var loggedRole by mutableStateOf<UserRole?>(null)
-    Window(onCloseRequest = ::exitApplication, title = "Petshop App") {
-        var currentScreen by remember { mutableStateOf(Screen.MainMenu) }
+
+    // Set default window size to 1280x720 (16:9)
+    val defaultWindowState = rememberWindowState(size = DpSize(1280.dp, 720.dp))
+
+    var currentScreen by remember { mutableStateOf(Screen.Landing) }
+
+    Window(
+        onCloseRequest = ::exitApplication,
+        title = "Petshop App",
+        state = defaultWindowState
+    ) {
+        // Get window size in dp
+        val windowSize = defaultWindowState.size
+
+        // Thresholds for "small" window
+        val minWidth = 600.dp
+        val minHeight = 400.dp
+
         MaterialTheme {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                WavyBackground(modifier = Modifier.fillMaxSize())
-                when (currentScreen) {
-                    Screen.AdminPanel -> AdminPanel(
-                        onLogout = {
-                            currentScreen = Screen.MainMenu
-                            loggedUsername = ""
-                            loggedRole = null
-                        },
-                        username = loggedUsername,
-                        animalsQueries = animalsQueries
-                    )
-                    Screen.CustomerPanel -> CustomerPanel (
-                        onLogout = {
-                            currentScreen = Screen.MainMenu
-                            loggedUsername = ""
-                            loggedRole = null
-                        },
-                        username = loggedUsername,
-                        animalsQueries = animalsQueries
-                    )
-                    Screen.MainMenu -> MainMenu(
-                        onLogin = { currentScreen = Screen.Login },
-                        onRegister = { currentScreen = Screen.Register }
-                    )
-                    Screen.Login -> LoginScreen(
-                        onBack = { currentScreen = Screen.MainMenu },
-                        onAdminLogin = { username ->
-                            loggedUsername = username
-                            loggedRole = UserRole.Admin
-                            currentScreen = Screen.AdminPanel
-                        },
-                        onCustomerLogin = { username ->
-                            loggedUsername = username
-                            loggedRole = UserRole.Customer
-                            currentScreen = Screen.CustomerPanel
-                        }
-                    )
-                    Screen.Register -> RegisterScreen(
-                        onBack = { currentScreen = Screen.MainMenu }
-                    )
-
-                    Screen.Home -> TODO()
+                // If window is too small, show smiley
+                if (windowSize.width < minWidth || windowSize.height < minHeight) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "\uD83D\uDE04",
+                            fontSize = 96.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    WavyBackground(modifier = Modifier.fillMaxSize())
+                    when (currentScreen) {
+                        Screen.Landing -> LandingPage(onContinue = { currentScreen = Screen.MainMenu })
+                        Screen.AdminPanel -> AdminPanel(
+                            onLogout = {
+                                currentScreen = Screen.MainMenu
+                                loggedUsername = ""
+                                loggedRole = null
+                            },
+                            username = loggedUsername,
+                            animalsQueries = animalsQueries
+                        )
+                        Screen.CustomerPanel -> CustomerPanel (
+                            onLogout = {
+                                currentScreen = Screen.MainMenu
+                                loggedUsername = ""
+                                loggedRole = null
+                            },
+                            username = loggedUsername,
+                            animalsQueries = animalsQueries
+                        )
+                        Screen.MainMenu -> MainMenu(
+                            onLogin = { currentScreen = Screen.Login },
+                            onRegister = { currentScreen = Screen.Register }
+                        )
+                        Screen.Login -> LoginScreen(
+                            onBack = { currentScreen = Screen.MainMenu },
+                            onAdminLogin = { username ->
+                                loggedUsername = username
+                                loggedRole = UserRole.Admin
+                                currentScreen = Screen.AdminPanel
+                            },
+                            onCustomerLogin = { username ->
+                                loggedUsername = username
+                                loggedRole = UserRole.Customer
+                                currentScreen = Screen.CustomerPanel
+                            }
+                        )
+                        Screen.Register -> RegisterScreen(
+                            onBack = { currentScreen = Screen.MainMenu }
+                        )
+                        Screen.Home -> TODO()
+                    }
                 }
             }
         }
@@ -234,17 +257,35 @@ fun main() = application {
 
 @Composable
 fun MainMenu(onLogin: () -> Unit, onRegister: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Welcome to Petshop App", style = MaterialTheme.typography.h5, color = Color.White)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.95f))
+            .padding(32.dp)
+            .width(350.dp)
+    ) {
+        Text(
+            "\uD83D\uDC36 Welcome to Petshop App \uD83D\uDC31",
+            style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF00897B),
+            textAlign = TextAlign.Center
+        )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onLogin, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black),
-            modifier = Modifier.width(200.dp)) {
-            Text("Login", color = Color.White)
+        Button(
+            onClick = onLogin,
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+            modifier = Modifier.width(220.dp).clip(RoundedCornerShape(16.dp))
+        ) {
+            Text("Login", color = Color.White, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRegister, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black),
-            modifier = Modifier.width(200.dp)) {
-            Text("Register", color = Color.White)
+        Button(
+            onClick = onRegister,
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+            modifier = Modifier.width(220.dp).clip(RoundedCornerShape(16.dp))
+        ) {
+            Text("Register", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -259,17 +300,17 @@ fun RegisterScreen(onBack: () -> Unit) {
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(Color.White.copy(alpha = 0.95f))
-            .padding(24.dp)
-            .width(300.dp),
+            .padding(32.dp)
+            .width(350.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Register", style = MaterialTheme.typography.h5)
+        Text("\uD83D\uDC31 Register", style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold), color = Color(0xFF00897B))
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Register as: ")
+            Text("Register as: ", color = Color(0xFF00695C))
             Spacer(modifier = Modifier.width(8.dp))
             DropdownMenuRoleSelector(
                 selectedRole = selectedRole,
@@ -283,7 +324,7 @@ fun RegisterScreen(onBack: () -> Unit) {
             onValueChange = { username = it },
             label = { Text("Username") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -294,7 +335,7 @@ fun RegisterScreen(onBack: () -> Unit) {
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -305,7 +346,7 @@ fun RegisterScreen(onBack: () -> Unit) {
             label = { Text("Confirm Password") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -331,16 +372,16 @@ fun RegisterScreen(onBack: () -> Unit) {
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B))
         ) {
-            Text("Register", color = Color.White)
+            Text("Register", color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(onClick = onBack) {
-            Text("Back to Menu", color = Color.Black)
+            Text("Back to Menu", color = Color(0xFF00897B))
         }
 
         message?.let {
@@ -359,7 +400,8 @@ fun DropdownMenuRoleSelector(
     Box {
         Button(
             onClick = { expanded = true },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+            modifier = Modifier.clip(RoundedCornerShape(8.dp))
         ) {
             Text(selectedRole.display, color = Color.White)
         }
@@ -385,17 +427,17 @@ fun LoginScreen(onBack: () -> Unit, onAdminLogin: (String) -> Unit, onCustomerLo
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(Color.White.copy(alpha = 0.95f))
-            .padding(24.dp)
-            .width(300.dp),
+            .padding(32.dp)
+            .width(350.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Login", style = MaterialTheme.typography.h5)
+        Text("\uD83D\uDC36 Login", style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold), color = Color(0xFF00897B))
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Login as: ")
+            Text("Login as: ", color = Color(0xFF00695C))
             Spacer(modifier = Modifier.width(8.dp))
             DropdownMenuRoleSelector(
                 selectedRole = selectedRole,
@@ -409,7 +451,7 @@ fun LoginScreen(onBack: () -> Unit, onAdminLogin: (String) -> Unit, onCustomerLo
             onValueChange = { username = it },
             label = { Text("Username") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -420,7 +462,7 @@ fun LoginScreen(onBack: () -> Unit, onAdminLogin: (String) -> Unit, onCustomerLo
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -447,21 +489,56 @@ fun LoginScreen(onBack: () -> Unit, onAdminLogin: (String) -> Unit, onCustomerLo
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B))
         ) {
-            Text("Login", color = Color.White)
+            Text("Login", color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(onClick = onBack) {
-            Text("Back to Menu", color = Color.Black)
+            Text("Back to Menu", color = Color(0xFF00897B))
         }
 
         message?.let {
             Spacer(modifier = Modifier.height(8.dp))
             Text(it, color = if (it.startsWith("Login successful")) Color(0xFF388E3C) else Color.Red)
+        }
+    }
+}
+
+@Composable
+fun LandingPage(onContinue: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(32.dp))
+            .background(Color.White.copy(alpha = 0.97f))
+            .padding(48.dp)
+            .width(500.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "\uD83D\uDC36 Petshop \uD83D\uDC31",
+            style = MaterialTheme.typography.h2.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF00897B),
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            "Find your new best friend today!",
+            style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Medium),
+            color = Color(0xFF00695C),
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(
+            onClick = onContinue,
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+            modifier = Modifier.width(220.dp).clip(RoundedCornerShape(20.dp))
+        ) {
+            Text("Continue", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         }
     }
 }

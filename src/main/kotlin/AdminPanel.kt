@@ -5,16 +5,28 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
 import app.petshop.database.PetshopQueries
-import org.jetbrains.skia.FontWeight
+import java.time.LocalDateTime
+
+// Local Animal data class matching your schema
+data class Animal(
+    val id: Long,
+    val name: String,
+    val species: String,
+    val age: Int,
+    val price: Double,
+    val status: String
+)
 
 @Composable
 fun AdminPanel(
@@ -43,20 +55,69 @@ fun AdminPanel(
     }
     LaunchedEffect(true) { refreshAnimals() }
 
+    // --- Statistics Section ---
+    val totalAnimals = animalsState.size
+    val availableAnimals = animalsState.count { it.status == "Available" }
+    val boughtAnimals = animalsState.count { it.status == "Bought" }
+    // --------------------------
+
     Box(contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFFF6F8FC))
                 .padding(24.dp)
+                .clip(RoundedCornerShape(24.dp))
         ) {
-            Text("Admin Panel", style = MaterialTheme.typography.h4 .copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Color.Black)
-            Text("Welcome, $username", style = MaterialTheme.typography.subtitle1 .copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Color.Black)
+            Text(
+                "\uD83D\uDC36 Admin Panel",
+                style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF00897B)
+            )
+            Text(
+                "Welcome, $username",
+                style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF00695C)
+            )
             Spacer(Modifier.height(16.dp))
 
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(800.dp)
+            // --- Statistics UI ---
+            Card(
+                backgroundColor = Color(0xFFB2DFDB),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                elevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Total", color = Color(0xFF00695C), fontWeight = FontWeight.Bold)
+                        Text("$totalAnimals", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Available", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold)
+                        Text("$availableAnimals", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Bought", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                        Text("$boughtAnimals", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            // --------------------
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(800.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFFE0F2F1))
             ) {
                 val state = rememberLazyListState()
                 LazyColumn(
@@ -92,7 +153,8 @@ fun AdminPanel(
             Spacer(Modifier.height(32.dp))
             Button(
                 onClick = onLogout,
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+                modifier = Modifier.clip(RoundedCornerShape(16.dp))
             ) {
                 Text("Logout", color = Color.White)
             }
@@ -151,18 +213,19 @@ fun AddAnimalCard(
             .fillMaxWidth()
             .height(100.dp)
             .padding(horizontal = 8.dp)
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onAdd),
         elevation = 8.dp,
-        backgroundColor = Color(0xFF808080)
+        backgroundColor = Color(0xFFB2DFDB)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
             Text(
-                text = "+",
-                color = Color.White,
-                style = MaterialTheme.typography.h3
+                text = "+ Add Animal",
+                color = Color(0xFF00695C),
+                style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold)
             )
         }
     }
@@ -178,9 +241,11 @@ fun AnimalCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
-            .padding(horizontal = 8.dp),
-        elevation = 8.dp
+            .height(120.dp)
+            .padding(horizontal = 8.dp)
+            .clip(RoundedCornerShape(20.dp)),
+        elevation = 8.dp,
+        backgroundColor = Color.White
     ) {
         Row(
             Modifier
@@ -189,30 +254,42 @@ fun AnimalCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Text(
+                text = when (animal.species.lowercase()) {
+                    "dog" -> "\uD83D\uDC36"
+                    "cat" -> "\uD83D\uDC31"
+                    "rabbit" -> "\uD83D\uDC30"
+                    "bird" -> "\uD83D\uDC26"
+                    else -> "\uD83D\uDC3E"
+                },
+                fontSize = androidx.compose.ui.unit.TextUnit.Unspecified,
+                modifier = Modifier.padding(end = 16.dp)
+            )
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Name: ${animal.name}", style = MaterialTheme.typography.subtitle1)
+                Text("Name: ${animal.name}", style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = Color(0xFF00897B)))
                 Text("Species: ${animal.species}", style = MaterialTheme.typography.body2)
                 Text("Age: ${animal.age}", style = MaterialTheme.typography.body2)
-                Text("Price: $${animal.price}", style = MaterialTheme.typography.body2)
+                Text("Price: $${animal.price}", style = MaterialTheme.typography.body2.copy(color = Color(0xFF388E3C), fontWeight = FontWeight.Bold))
                 Text("Status: ${animal.status}", style = MaterialTheme.typography.body2)
             }
             Row {
                 Button(
                     onClick = onEdit,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
-                    modifier = Modifier.padding(end = 8.dp)
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF80CBC4)),
+                    modifier = Modifier.padding(end = 8.dp).clip(RoundedCornerShape(12.dp))
                 ) { Text("Modify", color = Color.White) }
                 Button(
                     onClick = onDelete,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                    modifier = Modifier.padding(end = 8.dp)
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFD32F2F)),
+                    modifier = Modifier.padding(end = 8.dp).clip(RoundedCornerShape(12.dp))
                 ) { Text("Delete", color = Color.White) }
                 if (animal.status == "Available") {
                     Button(
                         onClick = onMarkBought,
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C))
+                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C)),
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp))
                     ) { Text("Mark as Bought", color = Color.White) }
                 }
             }
@@ -240,32 +317,36 @@ fun AnimalDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(title, color = Color(0xFF00897B), fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
                 )
                 OutlinedTextField(
                     value = species,
                     onValueChange = { species = it },
                     label = { Text("Species") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
                 )
                 OutlinedTextField(
                     value = age,
                     onValueChange = { age = it },
                     label = { Text("Age") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
                 )
                 OutlinedTextField(
                     value = price,
                     onValueChange = { price = it },
                     label = { Text("Price") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Status: ")
@@ -287,7 +368,8 @@ fun AnimalDialog(
                         error = null
                     }
                 },
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+                modifier = Modifier.clip(RoundedCornerShape(12.dp))
             ) {
                 Text("Save", color = Color.White)
             }
@@ -295,11 +377,14 @@ fun AnimalDialog(
         dismissButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray)
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
+                modifier = Modifier.clip(RoundedCornerShape(12.dp))
             ) {
                 Text("Cancel", color = Color.White)
             }
-        }
+        },
+        shape = RoundedCornerShape(24.dp),
+        backgroundColor = Color(0xFFE0F2F1)
     )
 }
 
@@ -313,7 +398,8 @@ fun DropdownMenuStatusSelector(
     Box {
         Button(
             onClick = { expanded = true },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+            modifier = Modifier.clip(RoundedCornerShape(8.dp))
         ) {
             Text(selectedStatus, color = Color.White)
         }

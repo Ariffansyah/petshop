@@ -35,10 +35,8 @@ UPDATE animals SET name = ?, species = ?, age = ?, price = ?, status = ? WHERE i
 deleteAnimal:
 DELETE FROM animals WHERE id = ?;
 
--- To change an animal's status (for example, when it is bought)
 updateAnimalStatus:
 UPDATE animals SET status = ? WHERE id = ?;
 
--- Optionally, to show only available animals
 selectAvailableAnimals:
 SELECT * FROM animals WHERE status = 'Available';

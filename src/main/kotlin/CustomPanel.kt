@@ -14,6 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import animalsQueries
 import app.petshop.database.PetshopQueries
 import java.time.LocalDateTime
@@ -24,7 +28,8 @@ import kotlin.text.toLong
 
 enum class CustomerPage {
     MAIN,
-    BROWSE
+    BROWSE,
+    PURCHASES // Add new page for purchases
 }
 
 data class Transaction(
@@ -42,6 +47,7 @@ fun CustomerPanel(
     onLogout: () -> Unit
 ) {
     var currentPage by remember { mutableStateOf(CustomerPage.MAIN) }
+    val purchases = remember { mutableStateListOf<Transaction>() } // Track purchases in session
 
     Row(modifier = Modifier.fillMaxSize()) {
         CustomerSidebar(
@@ -55,7 +61,7 @@ fun CustomerPanel(
             modifier = Modifier
                 .fillMaxSize()
                 .weight(1f)
-                .background(Color.White)
+                .background(Color(0xFFF6F8FC)) // Soft background
         ) {
             when (currentPage) {
                 CustomerPage.MAIN -> MainPage(
@@ -63,8 +69,10 @@ fun CustomerPanel(
                 )
                 CustomerPage.BROWSE -> BrowseSearchPage(
                     animalsQueries = animalsQueries,
-                    customer = Customer(username = username, password = "")
+                    customer = Customer(username = username, password = ""),
+                    onPurchase = { transaction -> purchases.add(transaction) }
                 )
+                CustomerPage.PURCHASES -> PurchasesPage(purchases)
             }
         }
     }
@@ -81,8 +89,13 @@ fun CustomerSidebar(
         modifier = Modifier
             .width(250.dp)
             .fillMaxHeight()
-            .background(Color.LightGray)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(Color(0xFFB2DFDB), Color(0xFFE0F7FA))
+                )
+            )
             .padding(16.dp)
+            .clip(RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp))
     ) {
         Box(
             modifier = Modifier
@@ -90,38 +103,53 @@ fun CustomerSidebar(
                 .padding(bottom = 24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Pet Shop",
-                style = MaterialTheme.typography.h6 .copy(fontWeight = FontWeight.Bold),
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "\uD83D\uDC36 Pet Shop",
+                    style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
+                    color = Color(0xFF00695C),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Hello, $username!",
+                    style = MaterialTheme.typography.subtitle2,
+                    color = Color(0xFF00897B)
+                )
+            }
         }
 
         Text(
             text = "Navigation",
             style = MaterialTheme.typography.subtitle2,
-            color = Color.Black,
+            color = Color(0xFF00695C),
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         SidebarMenuItem(
-            title = "Home",
+            title = "\uD83C\uDFE0 Home",
             isSelected = currentPage == CustomerPage.MAIN,
             onClick = { onPageSelected(CustomerPage.MAIN) }
         )
 
         SidebarMenuItem(
-            title = "Browse",
+            title = "\uD83D\uDC31 Browse",
             isSelected = currentPage == CustomerPage.BROWSE,
             onClick = { onPageSelected(CustomerPage.BROWSE) }
+        )
+
+        SidebarMenuItem(
+            title = "\uD83D\uDCB0 My Purchases",
+            isSelected = currentPage == CustomerPage.PURCHASES,
+            onClick = { onPageSelected(CustomerPage.PURCHASES) }
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
             onClick = onLogout,
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray)
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
         ) {
             Text("Logout", color = Color.White)
         }
@@ -134,12 +162,13 @@ fun SidebarMenuItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) Color.DarkGray else Color.Transparent
-    val textColor = if (isSelected) Color.White else Color.Black
+    val backgroundColor = if (isSelected) Color(0xFF80CBC4) else Color.Transparent
+    val textColor = if (isSelected) Color(0xFF004D40) else Color(0xFF00695C)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .background(backgroundColor)
             .padding(horizontal = 12.dp, vertical = 12.dp),
@@ -148,7 +177,7 @@ fun SidebarMenuItem(
         Text(
             text = title,
             color = textColor,
-            style = MaterialTheme.typography.body2
+            style = MaterialTheme.typography.body1.copy(fontWeight = FontWeight.SemiBold)
         )
     }
 
@@ -165,17 +194,23 @@ fun MainPage(onPageSelected: (CustomerPage) -> Unit,) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Welcome to Pet Shop",
-            style = MaterialTheme.typography.h4,
-            color = Color.Black,
+            text = "\uD83D\uDC36 Welcome to Pet Shop \uD83D\uDC31",
+            style = MaterialTheme.typography.h3.copy(fontWeight = FontWeight.Bold, fontSize = 36.sp),
+            color = Color(0xFF00897B),
             textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Find your new best friend today!",
+            style = MaterialTheme.typography.subtitle1,
+            color = Color(0xFF00695C)
         )
         Button(
             onClick = { onPageSelected(CustomerPage.BROWSE) },
-            modifier = Modifier.padding(top = 24.dp),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+            modifier = Modifier.padding(top = 32.dp).clip(RoundedCornerShape(24.dp)),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B))
         ) {
-            Text("Start Browsing", color = Color.White)
+            Text("Start Browsing", color = Color.White, fontSize = 18.sp)
         }
     }
 }
@@ -183,7 +218,8 @@ fun MainPage(onPageSelected: (CustomerPage) -> Unit,) {
 @Composable
 fun BrowseSearchPage(
     animalsQueries: PetshopQueries,
-    customer: Customer
+    customer: Customer,
+    onPurchase: (Transaction) -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
     val allAnimals = remember { mutableStateListOf<Animal>() }
@@ -239,9 +275,9 @@ fun BrowseSearchPage(
             .padding(24.dp)
     ) {
         Text(
-            text = "Browse Animals",
-            style = MaterialTheme.typography.h5,
-            color = Color.Black,
+            text = "\uD83D\uDC31 Browse Animals",
+            style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF00897B),
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -249,20 +285,24 @@ fun BrowseSearchPage(
             value = query,
             onValueChange = { query = it },
             label = { Text("Search by name or species") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)),
+            leadingIcon = { Text("\uD83D\uDD0D") }
         )
 
         Spacer(Modifier.height(16.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Category: ", color = Color.Black)
+            Text("Category: ", color = Color(0xFF00695C))
             Spacer(Modifier.width(8.dp))
             var expanded by remember { mutableStateOf(false) }
 
             Box {
                 Button(
                     onClick = { expanded = true },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp))
                 ) {
                     Text(selectedSpecies, color = Color.White)
                 }
@@ -281,25 +321,50 @@ fun BrowseSearchPage(
 
         Spacer(Modifier.height(16.dp))
 
-        Box(modifier = Modifier.fillMaxSize().weight(1f)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xFFE0F2F1))
+                .padding(8.dp)
+        ) {
             LazyColumn(state = listState) {
                 items(filteredAnimals) { animal ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp, horizontal = 12.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White)
                             .clickable {
                                 selectedAnimal = animal
                                 showDialog = true
                             },
-                        elevation = 6.dp
+                        elevation = 10.dp
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Name: ${animal.name}", style = MaterialTheme.typography.subtitle1)
-                            Text("Species: ${animal.species}", style = MaterialTheme.typography.body2)
-                            Text("Age: ${animal.age}", style = MaterialTheme.typography.body2)
-                            Text("Price: $${animal.price}", style = MaterialTheme.typography.body2)
-                            Text("Status: ${animal.status}", style = MaterialTheme.typography.body2)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = when (animal.species.lowercase()) {
+                                    "dog" -> "\uD83D\uDC36"
+                                    "cat" -> "\uD83D\uDC31"
+                                    "rabbit" -> "\uD83D\uDC30"
+                                    "bird" -> "\uD83D\uDC26"
+                                    else -> "\uD83D\uDC3E"
+                                },
+                                fontSize = 36.sp,
+                                modifier = Modifier.padding(end = 16.dp)
+                            )
+                            Column {
+                                Text("Name: ${animal.name}", style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = Color(0xFF00897B)))
+                                Text("Species: ${animal.species}", style = MaterialTheme.typography.body2)
+                                Text("Age: ${animal.age}", style = MaterialTheme.typography.body2)
+                                Text("Price: $${animal.price}", style = MaterialTheme.typography.body2.copy(color = Color(0xFF388E3C), fontWeight = FontWeight.Bold))
+                                Text("Status: ${animal.status}", style = MaterialTheme.typography.body2)
+                            }
                         }
                     }
                 }
@@ -315,7 +380,7 @@ fun BrowseSearchPage(
     if (showDialog && selectedAnimal != null) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Animal Details") },
+            title = { Text("Animal Details", color = Color(0xFF00897B), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("Name: ${selectedAnimal!!.name}")
@@ -326,32 +391,41 @@ fun BrowseSearchPage(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    animalsQueries.updateAnimalStatus("Bought", selectedAnimal!!.id)
-                    transaction = Transaction(
-                        customer = customer,
-                        animal = selectedAnimal!!,
-                        date = LocalDateTime.now()
-                    )
-                    showDialog = false
-                    showTotal = true
-                    refreshAnimals()
-                }) {
-                    Text("Buy")
+                Button(
+                    onClick = {
+                        animalsQueries.updateAnimalStatus("Bought", selectedAnimal!!.id)
+                        transaction = Transaction(
+                            customer = customer,
+                            animal = selectedAnimal!!,
+                            date = LocalDateTime.now()
+                        )
+                        showDialog = false
+                        showTotal = true
+                        refreshAnimals()
+                    },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C))
+                ) {
+                    Text("Buy", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancel")
+                OutlinedButton(onClick = { showDialog = false }) {
+                    Text("Cancel", color = Color(0xFF00897B))
                 }
-            }
+            },
+            shape = RoundedCornerShape(24.dp),
+            backgroundColor = Color(0xFFE0F2F1)
         )
     }
 
     if (showTotal && transaction != null) {
+        // Add to purchases when confirmed
+        LaunchedEffect(transaction) {
+            onPurchase(transaction!!)
+        }
         AlertDialog(
             onDismissRequest = { showTotal = false },
-            title = { Text("Purchase Successful") },
+            title = { Text("Purchase Successful", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("Name: ${transaction!!.animal.name}")
@@ -360,14 +434,75 @@ fun BrowseSearchPage(
                     Text("Price: $${transaction!!.animal.price}")
                     Text("Status: ${transaction!!.animal.status}")
                     Text("Date: ${transaction!!.date}")
-                    Text("Total: $${transaction!!.getTotal()}")
+                    Text("Total: $${transaction!!.getTotal()}", fontWeight = FontWeight.Bold, color = Color(0xFF388E3C))
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showTotal = false }) {
-                    Text("OK")
+                Button(
+                    onClick = { showTotal = false },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B))
+                ) {
+                    Text("OK", color = Color.White)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            backgroundColor = Color(0xFFE0F2F1)
+        )
+    }
+}
+
+@Composable
+fun PurchasesPage(purchases: List<Transaction>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+    ) {
+        Text(
+            text = "\uD83D\uDCB0 My Purchases",
+            style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF00897B),
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        if (purchases.isEmpty()) {
+            Text("You haven't bought any animals yet.", color = Color.Gray)
+        } else {
+            LazyColumn {
+                items(purchases) { transaction ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        elevation = 6.dp,
+                        backgroundColor = Color.White
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = when (transaction.animal.species.lowercase()) {
+                                    "dog" -> "\uD83D\uDC36"
+                                    "cat" -> "\uD83D\uDC31"
+                                    "rabbit" -> "\uD83D\uDC30"
+                                    "bird" -> "\uD83D\uDC26"
+                                    else -> "\uD83D\uDC3E"
+                                },
+                                fontSize = 32.sp,
+                                modifier = Modifier.padding(end = 16.dp)
+                            )
+                            Column {
+                                Text("Name: ${transaction.animal.name}", fontWeight = FontWeight.Bold)
+                                Text("Species: ${transaction.animal.species}")
+                                Text("Age: ${transaction.animal.age}")
+                                Text("Price: $${transaction.animal.price}")
+                                Text("Date: ${transaction.date}")
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 }
