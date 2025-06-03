@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,10 +27,21 @@ import kotlin.text.clear
 import kotlin.text.toInt
 import kotlin.text.toLong
 
+data class Animal(
+    val id: Long,
+    val name: String,
+    val species: String,
+    val age: Int,
+    val price: Double,
+    val status: String,
+    val owner: String? = null
+)
+
 enum class CustomerPage {
     MAIN,
     BROWSE,
-    PURCHASES // Add new page for purchases
+    PURCHASES,
+    CART
 }
 
 data class Transaction(
@@ -47,7 +59,32 @@ fun CustomerPanel(
     onLogout: () -> Unit
 ) {
     var currentPage by remember { mutableStateOf(CustomerPage.MAIN) }
-    val purchases = remember { mutableStateListOf<Transaction>() } // Track purchases in session
+    val purchases = remember { mutableStateListOf<Transaction>() }
+    val cart = remember { mutableStateListOf<Animal>() }
+
+    val ownedAnimals = remember { mutableStateListOf<Animal>() }
+    fun refreshOwnedAnimals() {
+        ownedAnimals.clear()
+        ownedAnimals.addAll(
+            animalsQueries.selectAnimalsByOwner(username).executeAsList().map {
+                Animal(
+                    id = it.id.toLong(),
+                    name = it.name,
+                    species = it.species,
+                    age = it.age.toInt(),
+                    price = it.price,
+                    status = it.status,
+                    owner = it.owner
+                )
+            }
+        )
+    }
+
+    LaunchedEffect(currentPage) {
+        if (currentPage == CustomerPage.PURCHASES) {
+            refreshOwnedAnimals()
+        }
+    }
 
     Row(modifier = Modifier.fillMaxSize()) {
         CustomerSidebar(
@@ -61,7 +98,7 @@ fun CustomerPanel(
             modifier = Modifier
                 .fillMaxSize()
                 .weight(1f)
-                .background(Color(0xFFF6F8FC)) // Soft background
+                .background(Color(0xFFF6F8FC))
         ) {
             when (currentPage) {
                 CustomerPage.MAIN -> MainPage(
@@ -70,9 +107,19 @@ fun CustomerPanel(
                 CustomerPage.BROWSE -> BrowseSearchPage(
                     animalsQueries = animalsQueries,
                     customer = Customer(username = username, password = ""),
-                    onPurchase = { transaction -> purchases.add(transaction) }
+                    cart = cart
                 )
-                CustomerPage.PURCHASES -> PurchasesPage(purchases)
+                CustomerPage.PURCHASES -> PurchasesPage(ownedAnimals)
+                CustomerPage.CART -> CartPage(
+                    cart = cart,
+                    animalsQueries = animalsQueries,
+                    username = username,
+                    onPurchase = {
+                        refreshOwnedAnimals()
+                        cart.clear()
+                        currentPage = CustomerPage.PURCHASES
+                    }
+                )
             }
         }
     }
@@ -142,6 +189,12 @@ fun CustomerSidebar(
             title = "\uD83D\uDCB0 My Purchases",
             isSelected = currentPage == CustomerPage.PURCHASES,
             onClick = { onPageSelected(CustomerPage.PURCHASES) }
+        )
+
+        SidebarMenuItem(
+            title = "\uD83D\uDCB3 Cart",
+            isSelected = currentPage == CustomerPage.CART,
+            onClick = { onPageSelected(CustomerPage.CART) }
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -219,7 +272,7 @@ fun MainPage(onPageSelected: (CustomerPage) -> Unit,) {
 fun BrowseSearchPage(
     animalsQueries: PetshopQueries,
     customer: Customer,
-    onPurchase: (Transaction) -> Unit = {}
+    cart: MutableList<Animal>
 ) {
     var query by remember { mutableStateOf("") }
     val allAnimals = remember { mutableStateListOf<Animal>() }
@@ -227,8 +280,6 @@ fun BrowseSearchPage(
     var selectedSpecies by remember { mutableStateOf("All") }
     var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
     var showDialog by remember { mutableStateOf(false) }
-    var showTotal by remember { mutableStateOf(false) }
-    var transaction by remember { mutableStateOf<Transaction?>(null) }
 
     fun refreshAnimals() {
         allAnimals.clear()
@@ -242,7 +293,8 @@ fun BrowseSearchPage(
                         species = it.species,
                         age = it.age.toInt(),
                         price = it.price,
-                        status = it.status
+                        status = it.status,
+                        owner = it.owner
                     )
                 }
         )
@@ -321,6 +373,18 @@ fun BrowseSearchPage(
 
         Spacer(Modifier.height(16.dp))
 
+        Row {
+            Button(
+                onClick = { /* go to cart page */ },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).padding(end = 8.dp)
+            ) {
+                Text("Go to Cart (${cart.size})", color = Color.White)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -365,6 +429,19 @@ fun BrowseSearchPage(
                                 Text("Price: $${animal.price}", style = MaterialTheme.typography.body2.copy(color = Color(0xFF388E3C), fontWeight = FontWeight.Bold))
                                 Text("Status: ${animal.status}", style = MaterialTheme.typography.body2)
                             }
+                            Spacer(Modifier.weight(1f))
+                            Button(
+                                onClick = {
+                                    if (!cart.any { it.id == animal.id }) {
+                                        cart.add(animal)
+                                    }
+                                },
+                                enabled = animal.status == "Available" && !cart.any { it.id == animal.id },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF80CBC4)),
+                                modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                            ) {
+                                Text(if (cart.any { it.id == animal.id }) "In Cart" else "Add to Cart", color = Color.White)
+                            }
                         }
                     }
                 }
@@ -393,19 +470,13 @@ fun BrowseSearchPage(
             confirmButton = {
                 Button(
                     onClick = {
-                        animalsQueries.updateAnimalStatus("Bought", selectedAnimal!!.id)
-                        transaction = Transaction(
-                            customer = customer,
-                            animal = selectedAnimal!!,
-                            date = LocalDateTime.now()
-                        )
+                        animalsQueries.updateAnimalOwnerAndStatus("Bought", customer.username, selectedAnimal!!.id)
                         showDialog = false
-                        showTotal = true
                         refreshAnimals()
                     },
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C))
                 ) {
-                    Text("Buy", color = Color.White)
+                    Text("Buy Now", color = Color.White)
                 }
             },
             dismissButton = {
@@ -417,29 +488,133 @@ fun BrowseSearchPage(
             backgroundColor = Color(0xFFE0F2F1)
         )
     }
+}
 
-    if (showTotal && transaction != null) {
-        // Add to purchases when confirmed
-        LaunchedEffect(transaction) {
-            onPurchase(transaction!!)
+@Composable
+fun CartPage(
+    cart: MutableList<Animal>,
+    animalsQueries: PetshopQueries,
+    username: String,
+    onPurchase: () -> Unit
+) {
+    val checkedMap = remember { mutableStateMapOf<Long, Boolean>() }
+    var showSuccess by remember { mutableStateOf(false) }
+    var total by remember { mutableStateOf(0.0) }
+
+    LaunchedEffect(cart.size) {
+        cart.forEach { animal ->
+            if (checkedMap[animal.id] == null) checkedMap[animal.id] = true
         }
-        AlertDialog(
-            onDismissRequest = { showTotal = false },
-            title = { Text("Purchase Successful", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text("Name: ${transaction!!.animal.name}")
-                    Text("Species: ${transaction!!.animal.species}")
-                    Text("Age: ${transaction!!.animal.age}")
-                    Text("Price: $${transaction!!.animal.price}")
-                    Text("Status: ${transaction!!.animal.status}")
-                    Text("Date: ${transaction!!.date}")
-                    Text("Total: $${transaction!!.getTotal()}", fontWeight = FontWeight.Bold, color = Color(0xFF388E3C))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+    ) {
+        Text(
+            text = "\uD83D\uDCB3 Cart",
+            style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF00897B),
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        if (cart.isEmpty()) {
+            Text("Your cart is empty.", color = Color.Gray)
+        } else {
+            LazyColumn {
+                items(cart) { animal ->
+                    val checked = checkedMap[animal.id] ?: true
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        elevation = 6.dp,
+                        backgroundColor = Color.White
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .toggleable(
+                                    value = checked,
+                                    onValueChange = { checkedMap[animal.id] = it }
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = checked,
+                                onCheckedChange = { checkedMap[animal.id] = it }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = when (animal.species.lowercase()) {
+                                    "dog" -> "\uD83D\uDC36"
+                                    "cat" -> "\uD83D\uDC31"
+                                    "rabbit" -> "\uD83D\uDC30"
+                                    "bird" -> "\uD83D\uDC26"
+                                    else -> "\uD83D\uDC3E"
+                                },
+                                fontSize = 32.sp,
+                                modifier = Modifier.padding(end = 16.dp)
+                            )
+                            Column {
+                                Text("Name: ${animal.name}", fontWeight = FontWeight.Bold)
+                                Text("Species: ${animal.species}")
+                                Text("Age: ${animal.age}")
+                                Text("Price: $${animal.price}")
+                            }
+                        }
+                    }
                 }
+            }
+            Spacer(Modifier.height(16.dp))
+            val selectedAnimals = cart.filter { checkedMap[it.id] == true }
+            total = selectedAnimals.sumOf { it.price }
+            Text("Total: $${"%.2f".format(total)}", fontWeight = FontWeight.Bold, color = Color(0xFF388E3C))
+            Spacer(Modifier.height(8.dp))
+            Row {
+                Button(
+                    onClick = {
+                        val toRemove = cart.filter { checkedMap[it.id] != true }
+                        cart.removeAll(toRemove)
+                        toRemove.forEach { checkedMap.remove(it.id) }
+                    },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                ) {
+                    Text("Remove Unchecked", color = Color.White)
+                }
+                Spacer(Modifier.width(16.dp))
+                Button(
+                    onClick = {
+                        selectedAnimals.forEach { animal ->
+                            animalsQueries.updateAnimalOwnerAndStatus("Bought", username, animal.id)
+                        }
+                        showSuccess = true
+                    },
+                    enabled = selectedAnimals.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C)),
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                ) {
+                    Text("Buy Selected", color = Color.White)
+                }
+            }
+        }
+    }
+    if (showSuccess) {
+        AlertDialog(
+            onDismissRequest = {
+                showSuccess = false
+                onPurchase()
             },
+            title = { Text("Purchase Successful", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) },
+            text = { Text("You have bought the selected animals!") },
             confirmButton = {
                 Button(
-                    onClick = { showTotal = false },
+                    onClick = {
+                        showSuccess = false
+                        onPurchase()
+                    },
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B))
                 ) {
                     Text("OK", color = Color.White)
@@ -452,7 +627,7 @@ fun BrowseSearchPage(
 }
 
 @Composable
-fun PurchasesPage(purchases: List<Transaction>) {
+fun PurchasesPage(ownedAnimals: List<Animal>) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -464,11 +639,11 @@ fun PurchasesPage(purchases: List<Transaction>) {
             color = Color(0xFF00897B),
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        if (purchases.isEmpty()) {
+        if (ownedAnimals.isEmpty()) {
             Text("You haven't bought any animals yet.", color = Color.Gray)
         } else {
             LazyColumn {
-                items(purchases) { transaction ->
+                items(ownedAnimals) { animal ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -482,7 +657,7 @@ fun PurchasesPage(purchases: List<Transaction>) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = when (transaction.animal.species.lowercase()) {
+                                text = when (animal.species.lowercase()) {
                                     "dog" -> "\uD83D\uDC36"
                                     "cat" -> "\uD83D\uDC31"
                                     "rabbit" -> "\uD83D\uDC30"
@@ -493,11 +668,11 @@ fun PurchasesPage(purchases: List<Transaction>) {
                                 modifier = Modifier.padding(end = 16.dp)
                             )
                             Column {
-                                Text("Name: ${transaction.animal.name}", fontWeight = FontWeight.Bold)
-                                Text("Species: ${transaction.animal.species}")
-                                Text("Age: ${transaction.animal.age}")
-                                Text("Price: $${transaction.animal.price}")
-                                Text("Date: ${transaction.date}")
+                                Text("Name: ${animal.name}", fontWeight = FontWeight.Bold)
+                                Text("Species: ${animal.species}")
+                                Text("Age: ${animal.age}")
+                                Text("Price: $${animal.price}")
+                                Text("Status: ${animal.status}")
                             }
                         }
                     }

@@ -20,17 +20,21 @@ CREATE TABLE animals (
     species TEXT NOT NULL,
     age INTEGER NOT NULL,
     price REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Available'
+    status TEXT NOT NULL DEFAULT 'Available',
+    owner TEXT -- New column for owner username, nullable
 );
 
 selectAllAnimals:
 SELECT * FROM animals;
 
+selectAnimalsByOwner:
+SELECT * FROM animals WHERE owner = ?;
+
 insertAnimal:
-INSERT INTO animals(name, species, age, price, status) VALUES (?, ?, ?, ?, ?);
+INSERT INTO animals(name, species, age, price, status, owner) VALUES (?, ?, ?, ?, ?, ?);
 
 updateAnimal:
-UPDATE animals SET name = ?, species = ?, age = ?, price = ?, status = ? WHERE id = ?;
+UPDATE animals SET name = ?, species = ?, age = ?, price = ?, status = ?, owner = ? WHERE id = ?;
 
 deleteAnimal:
 DELETE FROM animals WHERE id = ?;
@@ -38,5 +42,9 @@ DELETE FROM animals WHERE id = ?;
 updateAnimalStatus:
 UPDATE animals SET status = ? WHERE id = ?;
 
+updateAnimalOwnerAndStatus:
+UPDATE animals SET status = ?, owner = ? WHERE id = ?;
+
 selectAvailableAnimals:
 SELECT * FROM animals WHERE status = 'Available';
+

@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,17 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import app.petshop.database.PetshopQueries
-import java.time.LocalDateTime
-
-// Local Animal data class matching your schema
-data class Animal(
-    val id: Long,
-    val name: String,
-    val species: String,
-    val age: Int,
-    val price: Double,
-    val status: String
-)
 
 @Composable
 fun AdminPanel(
@@ -48,18 +39,18 @@ fun AdminPanel(
                     species = it.species,
                     age = it.age.toInt(),
                     price = it.price,
-                    status = it.status
+                    status = it.status,
+                    owner = it.owner
                 )
             }
         )
     }
     LaunchedEffect(true) { refreshAnimals() }
 
-    // --- Statistics Section ---
     val totalAnimals = animalsState.size
     val availableAnimals = animalsState.count { it.status == "Available" }
     val boughtAnimals = animalsState.count { it.status == "Bought" }
-    // --------------------------
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Box(contentAlignment = Alignment.Center) {
         Column(
@@ -70,19 +61,46 @@ fun AdminPanel(
                 .padding(24.dp)
                 .clip(RoundedCornerShape(24.dp))
         ) {
-            Text(
-                "\uD83D\uDC36 Admin Panel",
-                style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFF00897B)
-            )
-            Text(
-                "Welcome, $username",
-                style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFF00695C)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(onClick = {
+                        menuExpanded = false
+                        onLogout()
+                    }) {
+                        Text("Logout")
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        "\uD83D\uDC36 Admin Panel",
+                        style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF00897B)
+                    )
+                    Text(
+                        "Welcome, $username",
+                        style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF00695C)
+                    )
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
 
-            // --- Statistics UI ---
             Card(
                 backgroundColor = Color(0xFFB2DFDB),
                 modifier = Modifier
@@ -110,7 +128,6 @@ fun AdminPanel(
                     }
                 }
             }
-            // --------------------
 
             Box(
                 modifier = Modifier
@@ -149,27 +166,19 @@ fun AdminPanel(
                     modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
                 )
             }
-
-            Spacer(Modifier.height(32.dp))
-            Button(
-                onClick = onLogout,
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00897B)),
-                modifier = Modifier.clip(RoundedCornerShape(16.dp))
-            ) {
-                Text("Logout", color = Color.White)
-            }
         }
 
         if (showAddDialog) {
             AnimalDialog(
                 title = "Add Animal",
-                onConfirm = { name, species, age, price, status ->
+                onConfirm = { name, species, age, price, status, owner ->
                     animalsQueries.insertAnimal(
                         name = name,
                         species = species,
                         age = age.toLong(),
                         price = price,
-                        status = status
+                        status = status,
+                        owner = owner
                     )
                     refreshAnimals()
                     showAddDialog = false
@@ -186,13 +195,15 @@ fun AdminPanel(
                 initialAge = animal.age.toString(),
                 initialPrice = animal.price.toString(),
                 initialStatus = animal.status,
-                onConfirm = { name, species, age, price, status ->
+                initialOwner = animal.owner,
+                onConfirm = { name, species, age, price, status, owner ->
                     animalsQueries.updateAnimal(
                         name = name,
                         species = species,
                         age = age.toLong(),
                         price = price,
                         status = status,
+                        owner = owner,
                         id = animal.id
                     )
                     refreshAnimals()
@@ -273,6 +284,9 @@ fun AnimalCard(
                 Text("Age: ${animal.age}", style = MaterialTheme.typography.body2)
                 Text("Price: $${animal.price}", style = MaterialTheme.typography.body2.copy(color = Color(0xFF388E3C), fontWeight = FontWeight.Bold))
                 Text("Status: ${animal.status}", style = MaterialTheme.typography.body2)
+                animal.owner?.let {
+                    Text("Owner: $it", style = MaterialTheme.typography.body2)
+                }
             }
             Row {
                 Button(
@@ -305,7 +319,8 @@ fun AnimalDialog(
     initialAge: String = "",
     initialPrice: String = "",
     initialStatus: String = "Available",
-    onConfirm: (name: String, species: String, age: Long, price: Double, status: String) -> Unit,
+    initialOwner: String? = null,
+    onConfirm: (name: String, species: String, age: Long, price: Double, status: String, owner: String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initialName) }
@@ -313,6 +328,7 @@ fun AnimalDialog(
     var age by remember { mutableStateOf(initialAge) }
     var price by remember { mutableStateOf(initialPrice) }
     var status by remember { mutableStateOf(initialStatus) }
+    var owner by remember { mutableStateOf(initialOwner ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -353,6 +369,13 @@ fun AnimalDialog(
                     Spacer(Modifier.width(8.dp))
                     DropdownMenuStatusSelector(selectedStatus = status, onStatusSelected = { status = it })
                 }
+                OutlinedTextField(
+                    value = owner,
+                    onValueChange = { owner = it },
+                    label = { Text("Owner (username, optional)") },
+                    singleLine = true,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                )
                 error?.let { Text(it, color = Color.Red) }
             }
         },
@@ -364,7 +387,7 @@ fun AnimalDialog(
                     if (name.isBlank() || species.isBlank() || ageLong == null || priceDouble == null || status.isBlank()) {
                         error = "Please fill all fields correctly."
                     } else {
-                        onConfirm(name, species, ageLong, priceDouble, status)
+                        onConfirm(name, species, ageLong, priceDouble, status, owner.ifBlank { null })
                         error = null
                     }
                 },

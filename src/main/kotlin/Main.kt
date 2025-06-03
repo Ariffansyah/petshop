@@ -171,8 +171,7 @@ fun main() = application {
     var loggedUsername by mutableStateOf("")
     var loggedRole by mutableStateOf<UserRole?>(null)
 
-    // Set default window size to 1280x720 (16:9)
-    val defaultWindowState = rememberWindowState(size = DpSize(1280.dp, 720.dp))
+    val defaultWindowState = rememberWindowState(size = DpSize(1366.dp, 768.dp))
 
     var currentScreen by remember { mutableStateOf(Screen.Landing) }
 
@@ -181,10 +180,8 @@ fun main() = application {
         title = "Petshop App",
         state = defaultWindowState
     ) {
-        // Get window size in dp
         val windowSize = defaultWindowState.size
 
-        // Thresholds for "small" window
         val minWidth = 600.dp
         val minHeight = 400.dp
 
@@ -193,7 +190,6 @@ fun main() = application {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                // If window is too small, show smiley
                 if (windowSize.width < minWidth || windowSize.height < minHeight) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
