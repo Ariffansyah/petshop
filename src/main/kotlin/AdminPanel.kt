@@ -271,6 +271,14 @@ fun AnimalCard(
                     "cat" -> "\uD83D\uDC31"
                     "rabbit" -> "\uD83D\uDC30"
                     "bird" -> "\uD83D\uDC26"
+                    "parrot" -> "\uD83D\uDC26\uFE0F"
+                    "hamster" -> "\uD83D\uDC39"
+                    "fish" -> "\uD83D\uDC1F"
+                    "turtle" -> "\uD83D\uDC22"
+                    "snake" -> "\uD83D\uDC0D"
+                    "ferret" -> "\uD83D\uDC3F"
+                    "mouse" -> "\uD83D\uDC2D"
+                    "rat" -> "\uD83D\uDC2A"
                     else -> "\uD83D\uDC3E"
                 },
                 fontSize = androidx.compose.ui.unit.TextUnit.Unspecified,
